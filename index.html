@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Скачать файл с Google Диска</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.5s, color 0.5s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #f0f0f0, #cccccc);
+            overflow: hidden;
+            position: relative;
+        }
+
+        body.light {
+            background: linear-gradient(135deg, #f0f0f0, #cccccc);
+            color: #000000;
+        }
+
+        body.dark {
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .download-button {
+            padding: 15px 30px;
+            text-decoration: none;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            outline: none;
+            z-index: 2; /* Повышаем z-index, чтобы кнопка была выше частиц */
+        }
+
+        body.light .download-button:hover {
+            background-color: #444444;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark .download-button {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        body.dark .download-button:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            z-index: 2; /* Повышаем z-index */
+        }
+
+        .theme-toggle img {
+            width: 48px;
+            height: 48px;
+            transition: transform 0.5s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            transform: rotate(360deg);
+        }
+
+        .theme-toggle:active img {
+            transform: scale(0.8);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 3;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .modal-content input {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .confirm-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #007bff;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            outline: none;
+        }
+
+        .confirm-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            cursor: pointer;
+            color: #ff0000;
+            font-weight: bold;
+            float: right;
+        }
+
+        #accessMessage {
+            color: red;
+            margin-top: 10px;
+        }
+
+        /* Панелька */
+        .bottom-panel {
+            position: absolute;
+            bottom: 70px; /* Отодвигаем под кнопку скачать */
+            left: 20px; /* Левый отступ */
+            background-color: rgba(255, 255, 255, 0.8); /* Прозрачный фон */
+            color: black;
+            padding: 10px;
+            border: 2px solid black;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            width: 150px;
+            text-align: left; /* Текст выравнен по левому краю */
+            z-index: 2; /* Повышаем z-index */
+            overflow: hidden;
+            white-space: nowrap;
+            padding-left: 10px; /* Добавляем отступ слева */
+            padding-right: 10px; /* Добавляем отступ справа */
+        }
+
+        .bottom-panel:hover {
+            width: 400px;
+        }
+
+        .bottom-panel a {
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        body.dark .bottom-panel {
+            color: white;
+            border-color: white;
+            background-color: rgba(0, 0, 0, 0.8); /* Прозрачный фон для тёмной темы */
+        }
+
+        body.dark .bottom-panel a {
+            color: white;
+        }
+
+        .bottom-panel a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="light">
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <img src="images/moon.png" alt="Переключить тему">
+    </button>
+    <button class="download-button" onclick="openAccessModal()">Скачать</button>
+
+    <div class="bottom-panel">
+        Вводя код, вы соглашаетесь с <a href="https://example.com/terms" target="_blank">условиями использования</a>.
+    </div>
+
+    <div class="modal" id="accessModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Код доступа</h2>
+            <input type="text" id="accessCode" placeholder="Введите код доступа" required>
+            <button class="confirm-button" onclick="checkAccess()">Подтвердить</button>
+            <div id="accessMessage"></div>
+        </div>
+    </div>
+
+    <canvas id="particlesCanvas"></canvas>
+
+    <script>
+        const validAccessCode = '?VV@}kq7IeNpqa6BCzfjGXGZx'; // Замените на ваш код доступа
+
+        function openAccessModal() {
+            document.getElementById('accessModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('accessModal').style.display = 'none';
+            document.getElementById('accessMessage').innerText = ''; // Сброс сообщения об ошибке
+        }
+
+        function checkAccess() {
+            const accessCode = document.getElementById('accessCode').value;
+
+            if (accessCode === '') {
+                alert('Пожалуйста, введите код доступа.');
+                return;
+            }
+
+            if (accessCode === validAccessCode) {
+                closeModal();
+                window.location.href = "https://dl.dropboxusercontent.com/scl/fi/55ca1mhh6pwo02x4wqdng/snowflake.png?rlkey=uqeof1z9k935kom8pqggxci2u&st=7k4khgvk&dl=1";
+            } else {
+                document.getElementById('accessMessage').innerText = 'Неверный код доступа.';
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggleImg = document.querySelector('.theme-toggle img');
+            if (body.classList.contains('light')) {
+                body.classList.replace('light', 'dark');
+                themeToggleImg.src = 'images/sun.png';
+            } else {
+                body.classList.replace('dark', 'light');
+                themeToggleImg.src = 'images/moon.png';
+            }
+        }
+
+        // Настройки для частиц
+        const canvas = document.getElementById('particlesCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let particles = [];
+
+        // Установка размеров канваса
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Создание частиц
+        function Particle(x, y) {
+            this.x = x;
+            this.y = y;
+            this.size = Math.random() * 5 + 1;
+            this.speedX = Math.random() * 3 - 1.5;
+            this.speedY = Math.random() * 3 - 1.5;
+        }
+
+        Particle.prototype.update = function() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+
+            // Проверка на выход за границы
+            if (this.size < 0.3) {
+                this.size = 0;
+            }
+            if (this.x <= 0 || this.x >= canvas.width || this.y <= 0 || this.y >= canvas.height) {
+                this.size = 0; // Убираем частицы, если они выходят за границы
+            }
+        }
+
+        Particle.prototype.draw = function() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function init() {
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
